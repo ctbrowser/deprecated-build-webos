@@ -3,7 +3,7 @@
 
 # A leading / matches only entries in the top-level directory
 # A trailing / matches only directories
-# A trailing / is not added to directories which are often replaced with symlink 
+# A trailing / is not added to directories which are often replaced with symlink
 
 # Common Eclipse project files
 .project
@@ -14,9 +14,10 @@
 *~
 
 # Build products worth keeping between clean builds
-sstate-cache
-buildhistory
-downloads
+/sstate-cache
+/buildhistory
+/downloads
+/cache
 
 # Other build products
 BUILD-*/
