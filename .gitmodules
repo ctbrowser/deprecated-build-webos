@@ -10,3 +10,6 @@
 [submodule "meta-webos"]
 	path = meta-webos
 	url = git://github.com/openwebos/meta-webos.git
+[submodule "meta-webos-backports"]
+	path = meta-webos-backports
+	url = git://github.com/openwebos/meta-webos-backports.git
