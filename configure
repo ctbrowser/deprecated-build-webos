@@ -11,7 +11,7 @@
 # This configure script is free software; the Free Software Foundation
 # gives unlimited permission to copy, distribute and modify it.
 #
-# Copyright 2008-2013  Hewlett-Packard Development Company, L.P.
+# Copyright (c) 2008-2013 Hewlett-Packard Development Company, L.P.
 ## -------------------- ##
 ## M4sh Initialization. ##
 ## -------------------- ##
@@ -1361,7 +1361,7 @@ Copyright (C) 2010 Free Software Foundation, Inc.
 This configure script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it.
 
-Copyright 2008-2013  Hewlett-Packard Development Company, L.P.
+Copyright (c) 2008-2013 Hewlett-Packard Development Company, L.P.
 _ACEOF
   exit
 fi
