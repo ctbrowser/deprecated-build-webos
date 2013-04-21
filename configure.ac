@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-# Copyright (c) 2008-2013  Hewlett-Packard Development Company, L.P.
+# Copyright (c) 2008-2013 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 AC_INIT(webos, 0.0)
 AC_PREREQ([2.61])
-AC_COPYRIGHT([Copyright 2008-2013  Hewlett-Packard Development Company, L.P.])
+AC_COPYRIGHT([Copyright (c) 2008-2013 Hewlett-Packard Development Company, L.P.])
 AC_CONFIG_SRCDIR([build-templates/mcf-status.in])
 
 # customization
