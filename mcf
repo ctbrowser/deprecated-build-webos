@@ -23,6 +23,8 @@ import os
 import subprocess
 import sys
 import re
+import shlex
+from time import gmtime, strftime
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +75,8 @@ def getopts():
                        help='work verbosely')
 
     general.add_argument('-x', '--trace', action='store_true', help='trace')
+
+    general.add_argument('-U', '--update', action='store_true', help='update')
 
     variations = parser.add_argument_group('Build Instructions')
 
@@ -163,8 +167,7 @@ def location_to_dirname(layer, location):
 def readlayers(path):
    sys.path.insert(0,path)
    if not os.path.isfile(os.path.join(path,'weboslayers.py')):
-      print ("Error:" 'Configuration file {} does not exist!'.format(os.path.join(path,'weboslayers.py')))
-      raise ("Error:" 'Configuration file {} does not exist!'.format(os.path.join(path,'weboslayers.py')))
+      raise Exception("Error:" 'Configuration file {} does not exist!'.format(os.path.join(path,'weboslayers.py')))
 
    from weboslayers import webos_layers
    layerscount = 0
@@ -189,8 +192,7 @@ def readlayers(path):
 def readdistro(path):
    sys.path.insert(0,path)
    if not os.path.isfile(os.path.join(path,'weboslayers.py')):
-      print ("Error:" 'Configuration file {} does not exist!'.format(os.path.join(path,'weboslayers.py')))
-      raise ("Error:" 'Configuration file {} does not exist!'.format(os.path.join(path,'weboslayers.py')))
+      raise Exception("Error:" 'Configuration file {} does not exist!'.format(os.path.join(path,'weboslayers.py')))
 
    from weboslayers import Distribution
    return Distribution
@@ -201,14 +203,15 @@ def downloadprojects(srcdir,verbosity):
           print("Note:", 'Git repo {} exists! Skipping download.'.format(layer))
           continue
       if URLS[layer] and LOCATIONS[layer]:
-          print("Error:", 'Both url and location are defined for {} layer!'.format(layer))
-          raise("Error:", 'Both layer url and location are defined!')
+          raise Exception("Error:", 'Both url and location are defined for {} layer!'.format(layer))
       if not URLS[layer]:
           if not LOCATIONS[layer]:
-             print("Error:", 'Must define {} git repo or location!'.format(layer))
-             raise("Error:", 'Must define layer git repo or location!')
+             raise Exception("Error:", 'Must define {} git repo or location!'.format(layer))
           continue
 
+      downloadrepo(layer)
+
+def downloadrepo(layer,update=False):
       BRANCH = ''
       COMMIT = ''
       TAG = ''
@@ -226,15 +229,18 @@ def downloadprojects(srcdir,verbosity):
                COMMIT = str2
 
       if not BRANCH:
-         BRANCH = 'work_branch'
-      
-      cmd = 'git clone -n {}'.format(URLS[layer])
-      if echo_check_call(cmd,True):
-         raise('Error: running {}'.format(cmd))
+         BRANCH = 'master'
 
-      cmd = 'cd {0}; git checkout -B {1} {2}'.format(DIRNAME[layer], BRANCH, COMMIT)
-      if echo_check_call(cmd,True):
-          raise('Error: running {}'.format(cmd))
+      if not update:
+          cmd = 'git clone -n {}'.format(URLS[layer])
+          if echo_check_call(cmd,True):
+             raise Exception('Error: running {}'.format(cmd))
+
+          cmd = 'cd {0}; git checkout -B {1} {2}'.format(DIRNAME[layer], BRANCH, COMMIT)
+          if echo_check_call(cmd,True):
+             raise Exception('Error: running {}'.format(cmd))
+      else:
+          updaterepo(layer, DIRNAME[layer], COMMIT, BRANCH)
 
 def parselayerconffiles (layername, root):
   f = open(os.path.join(os.path.abspath(root), "conf", "layer.conf"), 'r')
@@ -267,8 +273,7 @@ def parseCollections (srcdir):
       if ( os.path.exists( '{}'.format(pathstr)) ):
           traversedir(pathstr)
       else:
-          print("Error:", 'directory does not exist {} !'.format(pathstr))
-          raise("Error:", 'Missing layer directory!')  
+          raise Exception("Error:", 'directory does not exist {} !'.format(pathstr))
 
 def writebblayersconf(sourcedir, machine):
     f = open(os.path.join(sourcedir, "BUILD-{0}".format(machine), "conf", "bblayers.conf"), 'a')
@@ -321,10 +326,108 @@ def writebblayersconf(sourcedir, machine):
     f.close
 
 
-    
-def updatelayer ():
-    return
+def updatelayers (sourcedir):
 
+    # Confirm update request before performing the udpate
+    print("Warning:  ********************************************" )
+    print("Warning:  Project area update has been requested." )
+    print("Warning:  All local changes untracked and committed" )
+    print("Warning:  must be backed up before the start of update" )
+    print("Warning:  ********************************************" )
+    print("Proceed with update no/yes(no)?")
+    userResponse = input()
+    userResponse.lower()
+    print ("Update: {}".format(userResponse))
+    if userResponse != "yes":
+        return
+
+    # all layers must exists before update
+    for layer in WEBOSLAYERS:
+      if not os.path.exists(os.path.abspath( DIRNAME[layer] ) ):
+          downloadrepo(layer)
+
+    # run sanity check on repo
+    layers_sanity = list()
+    update_location = list()
+    updated_layers = list()
+    for layer in WEBOSLAYERS:
+        if DIRNAME[layer] not in update_location:
+            update_location.append(DIRNAME[layer])
+            updated_layers.append(layer)
+            if reposanitycheck(layer, DIRNAME[layer]) != 0:
+               layers_sanity.append(layer)
+
+    if layers_sanity:
+         raise Exception('Error: project area contains local changes for layer(s) [{}]'.format(layers_sanity))
+
+    # update layers
+    for layer in WEBOSLAYERS:
+          if layer in updated_layers:
+            print('Note: updating [{}] git repo'.format(layer))
+            downloadrepo(layer,True)
+
+def reposanitycheck(layer, dname):
+
+   olddir = os.getcwd()
+   print(('Note: check for local change in repo [{}]'.format(layer)))
+   os.chdir(dname)
+
+   if subprocess.check_output(shlex.split("git status --porcelain")) or subprocess.check_output(shlex.split("git log --branches --not --remotes --simplify-by-decoration --decorate --oneline")):
+        print(('Warning: found local change in repo [{}]'.format(layer)))
+        res = 1
+   else:
+        res = 0
+
+   newdir = os.chdir(olddir)
+   os.getcwd()
+   return res
+
+def updaterepo(layer, dname, newid, newbranch):
+
+   olddir = os.getcwd()
+   os.chdir(dname)
+   currentcommitid = str(subprocess.check_output(shlex.split("git  log --pretty=format:%h -1")), encoding='utf-8', errors='strict')
+   currentbranch = str(subprocess.check_output(shlex.split("git rev-parse --abbrev-ref HEAD")), encoding='utf-8', errors='strict').rstrip()
+
+   if newid != currentcommitid:
+       print(('Note: repo [{}] require update'.format(layer)))
+       print(('Note: repo [{}] currentcommitid'.format(currentcommitid)))
+       print(('Note: repo [{}] newid'.format(newid)))
+       if newid:
+          if subprocess.call(shlex.split('git fetch')):
+             raise Exception('Error: git fitch failed for {}'.format(layer))
+
+          if subprocess.call(shlex.split('git checkout -B {0} {1}'.format(newbranch, newid))):
+            raise Exception('Error: git checkout -B {0} {1}'.format(newbranch, newid))
+       else:
+           # current branch always tracks a remote one
+          if subprocess.call(shlex.split('git pull origin')):
+            raise Exception('Error: git pull origin')
+       print(('Note: repo [{}] has been updated.'.format(layer)))
+   elif newbranch != currentbranch:
+   # only branch name change is a secondary trigger for update
+       print(('Note: repo [{}] require update'.format(layer)))
+       print(('Note: repo [{}] currentbranch'.format(currentbranch)))
+       print(('Note: repo [{}] newbranch'.format(newbranch)))
+       if newid:
+          if subprocess.call(shlex.split('git fetch')):
+             raise Exception('Error: git fitch failed for {}'.format(layer))
+
+          if subprocess.call(shlex.split('git checkout -B {0} {1}'.format(newbranch, newid))):
+            raise Exception('Error: git checkout -B {0} {1}'.format(newbranch, newid))
+       else:
+           # current branch always tracks a remote one
+          if subprocess.call(shlex.split('git pull origin')):
+            raise Exception('Error: git pull origin')
+
+          if subprocess.call(shlex.split('git checkout -B {}'.format(newbranch))):
+            raise Exception('Error: git checkout -B {}'.format(newbranch))
+       print(('Note: repo [{}] has been updated.'.format(layer)))
+   else:
+      print(('Note: repo [{}] is up-to-date.'.format(layer)))
+
+   newdir = os.chdir(olddir)
+   os.getcwd()
 
 if __name__ == '__main__':
    # NB. The exec done by mcf.status causes argv[0] to be an absolute pathname
@@ -423,10 +526,19 @@ if __name__ == '__main__':
         for i, j in replacements:
             cmd = cmd.replace(i, j)
 
+        if options.update:
+            # backup build directory
+            oldd = 'BUILD-{}'.format(machine)
+            if os.path.exists('{0}/{1}'.format(os.path.dirname(progname),oldd)):
+                os.rename(oldd,'{0}-{1}'.format(oldd, strftime("%Y%m%d%H%M%S", gmtime())))
+
         echo_check_call(cmd, options.verbose)
 
         readlayers(srcdir)
-        downloadprojects(srcdir,True)
+        if options.update:
+          updatelayers(srcdir)
+        else:
+          downloadprojects(srcdir,True)
         parseCollections(srcdir)
         writebblayersconf(srcdir, machine)
 
