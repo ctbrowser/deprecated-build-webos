@@ -319,6 +319,5 @@ if __name__ == '__main__':
 
         if options.webos:
             force_submodule('meta-webos', options.verbose, branch=options.webos)
-            force_submodule('meta-webos-backports', options.verbose, branch=options.webos)
 
         logger.info('Done.\n')

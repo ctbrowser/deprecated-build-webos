@@ -53,12 +53,10 @@ OECORE_LAYER ?= "@oecore_layer@"
 METAOE_LAYER ?= "@metaoe_layer@"
 METANETWORKING_LAYER ?= "@metaoe_layer@/../meta-networking"
 WEBOS_LAYER ?= "@webos_layer@"
-WEBOS_BACKPORTS_LAYER ?= "@webos_layer@-backports"
 
 BBFILES ?= ""
 BBLAYERS ?= " \
   ${WEBOS_LAYER} \
-  ${WEBOS_BACKPORTS_LAYER} \
   ${METANETWORKING_LAYER} \
   ${METAOE_LAYER} \
   ${OECORE_LAYER} \
