@@ -1,26 +1,38 @@
 # Copyright (c) 2012-2013 Hewlett-Packard Development Company, L.P.
+# Copyright (c) 2013 LG Electronics, Inc.
+
+# A leading / matches only entries in the top-level directory
+# A trailing / matches only directories
+# A trailing / is not added to directories which are often replaced with symlink
 
 # Common Eclipse project files
 .project
 .cproject
 .pc
 
+# Editor backup files
+*~
+
 # Build products worth keeping between clean builds
-sstate-cache/
-buildhistory
-downloads
+/sstate-cache
+/buildhistory
+/downloads
+/cache
 
 # Other build products
-*~
 BUILD-*/
-Makefile
+/Makefile
 TAGS
 autom4te.cache
-bitbake.lock
-mcf.status
+/bitbake.lock
+/mcf.status
 __pycache__/
-tmp
-patches
+tmp/
+patches/
+
+# Artifacts from generating build_changes.log
+build_changes.log
+latest_project_baselines*txt
 
 # Local override file
-webos-local.conf
+/webos-local.conf
